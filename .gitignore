@@ -1,0 +1,27 @@
+# Data - ignorar contenidos pero permitir .gitkeep
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Notebooks ejecutados (mantener solo los limpios en el repo)
+*_executed.ipynb
+
+# Modelos
+models/*.pkl
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Streamlit
+.streamlit/secrets.toml
