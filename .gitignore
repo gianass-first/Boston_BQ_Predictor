@@ -4,6 +4,11 @@ data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 
+# Modelos serializados (cualquier formato) pero mantener estructura
+models/*.pkl
+models/*.joblib
+!models/.gitkeep
+
 # Python
 __pycache__/
 *.pyc
@@ -14,9 +19,6 @@ venv/
 
 # Notebooks ejecutados (mantener solo los limpios en el repo)
 *_executed.ipynb
-
-# Modelos
-models/*.pkl
 
 # IDE
 .vscode/
