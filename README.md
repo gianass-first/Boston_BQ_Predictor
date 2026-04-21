@@ -1,17 +1,17 @@
-# 🏃 Boston Marathon BQ Predictor
+# Boston Marathon BQ Predictor
 
 **Proyecto Capstone ML — The Bridge Data Science & IA Bootcamp (Madrid, 2026)**
 **Autor:** Gian Marco
 
 ---
 
-## 🎯 Problema
+## Problema
 
 Clasificación binaria: dado el perfil de un corredor (edad, género, país, carrera objetivo), predecir la probabilidad de que alcance el tiempo Boston Qualifier (BQ) correspondiente a su categoría edad/género.
 
 **Ejemplo de uso:** un corredor de 32 años apuntando al Maratón de Valencia quiere saber, antes de entrenar para él, qué probabilidad tiene de clasificar a Boston según el perfil histórico de corredores similares en esa carrera.
 
-## 📊 Dataset
+## Dataset
 
 Fuente: [Boston Marathon Qualifiers Dataset](https://www.kaggle.com/datasets/runningwithrock/boston-marathon-qualifiers-dataset) (Kaggle, Rock Running, 2025).
 
@@ -74,7 +74,7 @@ boston-bq-predictor/
     └── test_preprocessing.py    # Tests básicos (opcional pero suma)
 ```
 
-## 🛠️ Stack técnico
+## Stack técnico
 
 - Python 3.12 (gestionado con UV)
 - pandas, numpy
@@ -85,7 +85,7 @@ boston-bq-predictor/
 - SHAP (interpretabilidad)
 - Streamlit (demo)
 
-## 🚀 Cómo ejecutar
+## Cómo ejecutar
 
 ```bash
 # Clonar el repo
@@ -104,7 +104,7 @@ uv pip install -r requirements.txt
 streamlit run app/streamlit_app.py
 ```
 
-## 📈 Resultados clave
+## Resultados clave
 
 *(Se completa al final del proyecto)*
 
@@ -112,7 +112,7 @@ streamlit run app/streamlit_app.py
 - Baseline (LogReg simple): _por definir_
 - Mejor modelo: _por definir_
 
-## ⚠️ Limitaciones conocidas
+## Limitaciones conocidas
 
 Ver [DECISIONS.md](./DECISIONS.md) para la justificación completa.
 
@@ -120,6 +120,6 @@ Ver [DECISIONS.md](./DECISIONS.md) para la justificación completa.
 2. Dataset limitado a 2022-2024 (3 años post-pandemia)
 3. No incluye datos de entrenamiento previos del corredor (ritmos, volumen, etc.)
 
-## 📚 Agradecimientos
+## Agradecimientos
 
 Dataset compilado y publicado por [Running with Rock](https://runningwithrock.com/).
