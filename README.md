@@ -20,7 +20,7 @@ Fuente: [Boston Marathon Qualifiers Dataset](https://www.kaggle.com/datasets/run
 - **3 años**: 2022, 2023, 2024
 - **3 tablas**: Results, Races, BQStandards
 
-## 🏗️ Estructura del repo
+## Estructura del repo
 
 ```
 boston-bq-predictor/
