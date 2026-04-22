@@ -231,7 +231,17 @@ Para reutilización en predicciones futuras (Streamlit, inferencia):
 
 ---
 
-## Decisiones pendientes
+## Decisión 11 — Normalización exhaustiva de códigos de país
 
-- [ ] Threshold de decisión: ¿0.5 por defecto o optimizar según F1/precisión requerida?
-- [ ] ¿Eliminar `Year` del set de features finales antes de entrenar? (está guardado por si acaso, pero no debería usarse como predictor)
+**Fecha:** 22-abr-2026
+
+Al llegar al Notebook 04 se detectó que el one-hot encoding de `Country` contenía columnas duplicadas (BR/BRA, FR/FRA, ES/ESP, etc.) porque el `country_mapping` inicial del Notebook 01 (Decisión 6) solo cubría 3 países (USA, GBR, GER).
+
+**Alcance de la corrección:**
+- 166 códigos de 3 letras normalizados a ISO-2 (FRA→FR, BRA→BR, etc.)
+- 5 códigos atípicos normalizados (NED→NL, SUI→CH, INA→ID, RSA→ZA, CHI→CL)
+- 1 código ambiguo tratado como UNKNOWN (BUR: podría ser Burundi o Burkina Faso, solo 2 corredores)
+
+**Resultado:** dataset pasa de ~220 códigos heterogéneos a 197 países en ISO-2 consistente (más UNKNOWN). El one-hot del Notebook 03 queda limpio sin duplicados.
+
+**Aprendizaje:** la validación de cardinalidad de variables categóricas debe hacerse en el notebook de limpieza, no descubrirse en feature engineering. Añadir siempre un print de `value_counts()` y una verificación de longitud de strings como sanity check temprano.
