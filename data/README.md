@@ -1,7 +1,3 @@
-# 📊 Datos del proyecto
-
-Los archivos de datos NO están versionados en Git por su tamaño (Results.csv pesa 136 MB).
-
 ## Cómo obtener los datos
 
 1. Descarga el dataset desde Kaggle:
@@ -12,8 +8,19 @@ Los archivos de datos NO están versionados en Git por su tamaño (Results.csv p
    - `Races.csv`
    - `Results.csv`
 
-3. Ejecuta el notebook `notebooks/01_data_cleaning.ipynb` para generar los datos procesados en `data/processed/`:
-   - `train.csv`
-   - `test.csv`
-   - `spain_slice.csv`
-   - `cleaning_log.csv`
+3. Ejecuta el notebook `notebooks/01_data_cleaning.ipynb` para generar los datos limpios en `data/processed/`:
+   - `train.csv` (corredores 2022-2023 limpios)
+   - `test.csv` (corredores 2024 limpios)
+   - `spain_slice.csv` (slice narrativo para la presentación)
+   - `cleaning_log.csv` (trazabilidad de la limpieza)
+
+4. Ejecuta el notebook `notebooks/03_feature_engineering.ipynb` para generar las features finales en:
+   - `data/train/train_features.csv` (listo para entrenar)
+   - `data/test/test_features.csv` (reservado para evaluación final)
+
+## Notas
+
+- `data/processed/` contiene los datos limpios pre-feature-engineering
+- `data/train/` y `data/test/` contienen las features finales listas para los modelos
+- El test set NO se toca hasta el Notebook 07 (evaluación final)
+EOF
