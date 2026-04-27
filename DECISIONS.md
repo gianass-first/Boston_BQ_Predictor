@@ -245,3 +245,52 @@ Al llegar al Notebook 04 se detectó que el one-hot encoding de `Country` conten
 **Resultado:** dataset pasa de ~220 códigos heterogéneos a 197 países en ISO-2 consistente (más UNKNOWN). El one-hot del Notebook 03 queda limpio sin duplicados.
 
 **Aprendizaje:** la validación de cardinalidad de variables categóricas debe hacerse en el notebook de limpieza, no descubrirse en feature engineering. Añadir siempre un print de `value_counts()` y una verificación de longitud de strings como sanity check temprano.
+
+## Decisión 12 — Manejo del desbalance: `scale_pos_weight` sobre SMOTE
+
+**Fecha:** 27 de abril de 2026
+**Notebook:** `06_imbalance_handling.ipynb`
+
+### Contexto
+
+Tras el N05 los modelos convergen a precision ~55% y recall ~10% con threshold 0.5. PR-AUC alto (~0.33) y ROC-AUC alto (~0.73) indican que el ranking interno del modelo es bueno. El problema no es de capacidad sino de **calibración + threshold**: las probabilidades están comprimidas hacia la prevalencia base (0.135), por lo que casi nadie cruza el umbral 0.5.
+
+### Opciones evaluadas
+
+Tres configuraciones de XGBoost con todo lo demás constante (mismo CV, mismos hiperparámetros, threshold fijo en 0.5):
+
+1. **Baseline:** XGBoost sin manejo de desbalance.
+2. **`scale_pos_weight = 6.4345`:** penalización en la pérdida (n_neg / n_pos).
+3. **SMOTE clásico:** oversampling sintético dentro de `imblearn.pipeline.Pipeline` para evitar leakage.
+
+### Resultados (CV 5-fold sobre train)
+
+| Configuración | F1 | Precision | Recall | PR-AUC | ROC-AUC | Fit time |
+|---|---|---|---|---|---|---|
+| Baseline | 0.167 | 0.556 | 0.098 | 0.336 | 0.736 | 2.27s |
+| scale_pos_weight | **0.349** | 0.235 | **0.677** | **0.336** | **0.735** | **1.84s** |
+| SMOTE | 0.346 | 0.236 | 0.645 | 0.330 | 0.727 | 5.86s |
+
+### Decisión: `scale_pos_weight`
+
+Empate técnico en F1 con SMOTE (diferencia de 0.003, dentro del ruido), pero `scale_pos_weight` se elige por:
+
+1. **Más rápido:** 3x menos tiempo de entrenamiento por fit.
+2. **PR-AUC y ROC-AUC ligeramente superiores** (+0.007 y +0.008 vs SMOTE).
+3. **Sin riesgo de generar perfiles imposibles:** SMOTE clásico interpola features categóricas one-hot (Country, Gender), produciendo combinaciones tipo "0.4 España + 0.6 Kenia" o "género 0.5", inexistentes en la realidad.
+4. **Sin riesgo de leakage:** no hay datos sintéticos, simplifica el pipeline y la reproducibilidad.
+5. **Implementación nativa de XGBoost:** un solo hiperparámetro con fórmula cerrada (`n_neg / n_pos`).
+
+### Hallazgo clave
+
+Las 3 configuraciones tienen **PR-AUC y ROC-AUC casi idénticos**. Esto significa que el manejo del desbalance NO mejora la capacidad de discriminación del modelo: solo desplaza las probabilidades hacia arriba para que más ejemplos crucen el threshold 0.5. La capacidad de ranking ya estaba en el baseline.
+
+### Implicación
+
+El siguiente cuello de botella ya no es el desbalance, es el **threshold de decisión**. Por eso el N07 hará threshold tuning sobre `XGBoost + scale_pos_weight` antes de cualquier nuevo intento de mejorar capacidad (GridSearch de hiperparámetros, ensembles, etc.).
+
+### Descartado (no aplicado)
+
+- **SMOTENC:** la solución correcta para features mixtas (numéricas + categóricas), pero requiere especificar manualmente las columnas categóricas y con el one-hot expandido es operativamente costoso. Dado que SMOTE clásico ya empata con `scale_pos_weight` y este último es preferible por velocidad y simplicidad, no se justifica el esfuerzo de SMOTENC.
+- **Undersampling de la clase mayoritaria:** descartado porque desperdicia ~165k filas de información real de no-BQs.
+- **ADASYN y otras variantes:** descartadas por el mismo motivo que SMOTE: no esperamos ganancia significativa sobre `scale_pos_weight` y aumentan complejidad.
