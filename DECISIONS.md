@@ -294,3 +294,88 @@ El siguiente cuello de botella ya no es el desbalance, es el **threshold de deci
 - **SMOTENC:** la solución correcta para features mixtas (numéricas + categóricas), pero requiere especificar manualmente las columnas categóricas y con el one-hot expandido es operativamente costoso. Dado que SMOTE clásico ya empata con `scale_pos_weight` y este último es preferible por velocidad y simplicidad, no se justifica el esfuerzo de SMOTENC.
 - **Undersampling de la clase mayoritaria:** descartado porque desperdicia ~165k filas de información real de no-BQs.
 - **ADASYN y otras variantes:** descartadas por el mismo motivo que SMOTE: no esperamos ganancia significativa sobre `scale_pos_weight` y aumentan complejidad.
+
+## Decisión 13 — Threshold tuning: F0.5 sobre F1/F2
+
+**Fecha:** 28 de abril de 2026  
+**Notebook:** `07_threshold_tuning.ipynb`
+
+### Contexto
+
+Tras el N06, el modelo `XGBoost + scale_pos_weight` tenía precision 0.235 / recall 0.677 / F1 0.349 con threshold default 0.5. PR-AUC = 0.336 confirmaba buena capacidad de ranking, pero el threshold por defecto era arbitrario y sub-óptimo.
+
+### Procedimiento
+
+1. Probabilidades out-of-fold sobre todo el train con `cross_val_predict(method='predict_proba')`.
+2. `precision_recall_curve` para todos los thresholds posibles.
+3. Cálculo de F1, F2 y F0.5 para cada threshold.
+4. Selección del threshold óptimo según criterio.
+
+### Thresholds candidatos evaluados
+
+| Criterio | Threshold | Precision | Recall | F-score correspondiente |
+|---|---|---|---|---|
+| Default | 0.500 | 0.235 | 0.677 | F1 = 0.349 |
+| F1 óptimo | 0.590 | 0.298 | 0.470 | F1 = 0.365 |
+| F2 óptimo (recall focus) | 0.420 | 0.206 | 0.799 | F2 = 0.507 |
+| **F0.5 óptimo (precision focus)** | **0.748** | **0.465** | **0.214** | **F0.5 = 0.376** |
+
+### Decisión: threshold = 0.748 (F0.5 óptimo)
+
+Razones:
+
+1. **Coherencia con el caso de uso de la app:** dar falsas esperanzas a un corredor (decir "vas a clasificar" cuando no) es peor que dar dudas razonables. F0.5 pondera precision el doble que recall, lo cual implementa esa lógica.
+2. **Coherencia con el target del proyecto:** el target es BQ nominal (no admisión real a Boston). Un modelo "generoso" sobre un target ya generoso da un mensaje doblemente flojo. Threshold conservador compensa.
+3. **Trade-off aceptado:** -46 pts de recall a cambio de +98% de precision. F1 sube ligeramente como bonus.
+
+Los 3 thresholds (F1, F2, F0.5) se reportan en la presentación técnica como sensitivity analysis.
+
+### Resultados sobre test 2024
+
+| Métrica | Valor | Delta vs Baseline N05 |
+|---|---|---|
+| F1 | 0.330 | +0.154 (+87%) |
+| Precision | 0.372 | -0.016 |
+| Recall | 0.296 | +0.182 (+159%) |
+| PR-AUC | 0.302 | — |
+| ROC-AUC | 0.741 | — |
+
+Drift temporal confirmado: precision en test cae 9 puntos vs CV (0.465 → 0.372) por la mayor proporción de corredores que se quedan a las puertas del BQ en 2024.
+
+### Pendiente
+
+Calibración de probabilidades (Platt / isotonic) para la app Streamlit, ya que `scale_pos_weight` deja las probabilidades sin calibrar (media en CV ≈ 0.43 vs prevalencia real 0.135). El threshold tuning no requiere calibración (solo ranking), pero la app sí.
+
+---
+
+## Decisión 14 — Limitación de generalización geográfica
+
+**Fecha:** 28 de abril de 2026  
+**Notebook:** `07_threshold_tuning.ipynb` (sección 8, slice por país)
+
+### Hallazgo
+
+Análisis de slice por país sobre test 2024 con threshold = 0.748:
+
+| País | n | BQ rate | Precision | Recall | F1 |
+|---|---|---|---|---|---|
+| US | 54,093 | 13.7% | 0.372 | 0.405 | **0.388** |
+| Other | 4,205 | 18.9% | 0.375 | 0.146 | 0.211 |
+| CA | 3,250 | 11.9% | 0.550 | 0.028 | 0.054 |
+| GB | 11,184 | 14.8% | 1.000 | 0.001 | 0.001 |
+
+Sobre 11,184 corredores británicos (con ~1,650 BQs reales), el modelo predice 1 sólo BQ. Sobre 3,250 canadienses (con ~387 BQs), predice 3.
+
+### Causa raíz
+
+Sesgo de muestreo en los datos de entrenamiento: los maratones de `Races.csv` son mayoritariamente estadounidenses. Los británicos y canadienses representados son una minoría con perfiles muy específicos (probablemente runners de élite que viajan a USA), no representativos de la población general de runners de esos países. El modelo aprende que esos países "rara vez son BQ" y les asigna probabilidades sistemáticamente bajas.
+
+### Implicación
+
+**El modelo solo es fiable para corredores estadounidenses.** Para cualquier otra nacionalidad, las predicciones tienen un sesgo sistemático que no refleja la realidad sino la composición del dataset.
+
+### Acción
+
+1. Documentar limitación en la presentación técnica y en la memoria.
+2. App Streamlit: limitar el caso de uso a corredores USA, o mostrar warning explícito para otras nacionalidades ("predicción menos fiable, dataset USA-céntrico").
+3. Para futuras iteraciones: buscar datasets adicionales con maratones europeos (Berlín, Londres, Valencia) para reentrenar con datos más representativos.
