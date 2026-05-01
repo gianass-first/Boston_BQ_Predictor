@@ -1,19 +1,15 @@
-cat > .gitignore << 'EOF'
-# Data - ignorar contenidos pero permitir .gitkeep
+# Data - ignorar raw (pesado) y train/test (regenerable), pero subir processed clave
 data/raw/*
-data/processed/*
 data/train/*
 data/test/*
+data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/train/.gitkeep
 !data/test/.gitkeep
+!data/processed/finishers_with_clusters.parquet
 
-# Modelos serializados y métricas generadas pero mantener estructura
-models/*.pkl
-models/*.joblib
-models/*.csv
-!models/.gitkeep
+# Modelos - SÍ se suben para que la app funcione al clonar el repo
 
 # Python
 __pycache__/
@@ -23,7 +19,7 @@ __pycache__/
 venv/
 .ipynb_checkpoints/
 
-# Notebooks ejecutados
+# Notebooks ejecutados (versiones temporales)
 *_executed.ipynb
 
 # IDE
@@ -33,4 +29,3 @@ venv/
 
 # Streamlit
 .streamlit/secrets.toml
-EOF

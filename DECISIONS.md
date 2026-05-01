@@ -379,3 +379,255 @@ Sesgo de muestreo en los datos de entrenamiento: los maratones de `Races.csv` so
 1. Documentar limitación en la presentación técnica y en la memoria.
 2. App Streamlit: limitar el caso de uso a corredores USA, o mostrar warning explícito para otras nacionalidades ("predicción menos fiable, dataset USA-céntrico").
 3. Para futuras iteraciones: buscar datasets adicionales con maratones europeos (Berlín, Londres, Valencia) para reentrenar con datos más representativos.
+
+## Decision 15 — Unsupervised Learning (Clustering of Runners)
+
+**Date:** April 2026  
+**Notebook:** `08_clustering_runners.ipynb`
+
+### Objective
+
+To identify **latent runner archetypes** using unsupervised learning in order to enrich the supervised prediction model with contextual segmentation.
+
+The goal was not predictive performance, but **interpretability and user experience enhancement** in the Streamlit application.
+
+---
+
+### Methodology
+
+We applied **KMeans clustering** using only:
+
+- `Age`
+- `Finish time`
+
+### Critical design choice:
+
+We explicitly excluded:
+
+- `Country`
+- `Gender`
+- `Race category`
+
+This ensures clusters represent **true performance archetypes**, not demographic or event bias.
+
+---
+
+### Why only 2 features?
+
+- Avoid overfitting clustering to categorical variables
+- Ensure clusters reflect physiological + performance structure
+- Maximize interpretability for end users
+
+---
+
+### Scaling decision
+
+StandardScaler was applied because:
+
+- Age (18–80) and Finish (7200–25000 sec) are not comparable
+- KMeans relies on Euclidean distance → scaling is mandatory
+
+---
+
+### Optimal number of clusters (k)
+
+We evaluated k = 2 to 8 using:
+
+- Elbow method (inertia)
+- Silhouette score
+
+### Final decision:
+
+**k = 4 clusters**
+
+| Criterion | Result |
+|---|---|
+| Silhouette score | 0.355 |
+| Inertia improvement vs k=3 | Significant |
+| Interpretability | High (4 clear archetypes) |
+
+---
+
+### Final clusters discovered
+
+| Cluster | Profile | Interpretation |
+|---|---|---|
+| Advanced Young | Fast + young runners | Competitive amateurs |
+| Advanced Veteran | Fast + experienced | Highest BQ success rate |
+| Aspiring Young | Slow + young | Developing runners |
+| Aspiring Veteran | Slow + older | Recreational runners |
+
+---
+
+### Key insight
+
+> Marathon performance is a joint function of age and pacing efficiency, not a single linear skill dimension.
+
+---
+
+### Business value
+
+In the Streamlit app:
+
+- Each runner is assigned a cluster
+- They receive:
+  - “Runners like you have X% BQ rate”
+  - “You are closer to cluster Y than Z”
+
+This transforms the system into a **context-aware coaching tool**
+
+---
+
+## Decision 16 — Cluster Interpretation Strategy
+
+**Date:** April 2026
+
+### Approach
+
+Clusters were not labeled algorithmically. Instead:
+
+1. KMeans produces clusters
+2. Interpretation based on:
+   - Centroids
+   - Age/Finish distributions
+   - BQ rate per cluster
+   - Demographic composition
+
+---
+
+### Why not automatic labeling?
+
+Because clustering is **unsupervised** and semantic meaning must be validated post-hoc.
+
+Manual interpretation ensures:
+
+- Narrative consistency
+- Business interpretability
+- Avoid misleading labels
+
+---
+
+## Decision 17 — Separation of Clustering and Supervised Learning
+
+**Date:** April 2026
+
+### Decision
+
+Clustering is NOT used as a feature in the predictive model.
+
+---
+
+### Reason
+
+- Risk of indirect leakage (clusters derived from predictive variables)
+- No guarantee clusters improve generalization
+- Different objectives:
+  - XGBoost → prediction
+  - KMeans → interpretation
+
+---
+
+### Final architecture
+
+1. **XGBoost model → probability of BQ**
+2. **Threshold tuning → decision calibration**
+3. **KMeans → contextual explanation layer**
+
+---
+
+## Decision 18 — Model Persistence Strategy
+
+**Date:** April 2026
+
+### Saved artifacts
+
+- `kmeans_final.joblib`
+- `scaler_clustering.joblib`
+- `cluster_metadata.joblib`
+- `finishers_with_clusters.parquet`
+
+---
+
+### Metadata includes:
+
+- Cluster names
+- Centroids (original scale)
+- Feature list
+- Silhouette score
+- Dataset sizes
+
+---
+
+### Why this matters
+
+Ensures:
+
+- Reproducibility
+- Production readiness (Streamlit)
+- No retraining required for inference
+
+---
+
+## Decision 19 — Final System Architecture
+
+**Date:** April 2026
+
+### Final system design
+
+| Layer | Function |
+|---|---|
+| XGBoost | Probability estimation |
+| Threshold (0.748) | Decision boundary optimization |
+| KMeans | Behavioral segmentation |
+
+---
+
+### Why this design works
+
+Because the problem is not only predictive:
+
+- Prediction alone is insufficient
+- Decision threshold defines usefulness
+- Clustering adds interpretability
+
+---
+
+### Key insight
+
+> Real-world ML systems are not just models — they are decision pipelines.
+
+---
+
+## Decision 20 — Final Product Definition
+
+**Date:** April 2026
+
+### What this system is NOT
+
+- Not a deterministic predictor
+- Not a medical or physiological model
+- Not a guarantee system
+
+---
+
+### What this system IS
+
+> A probabilistic decision-support tool that estimates Boston Marathon qualification likelihood and contextualizes it within peer groups.
+
+---
+
+### Core value
+
+- “What is my probability of BQ?”
+- “What group of runners am I similar to?”
+- “What would I need to improve to change cluster?”
+
+---
+
+## FINAL GLOBAL INSIGHT
+
+Across all notebooks, the key conclusion is:
+
+> The main limitation of the system is not model capacity, but decision calibration (thresholding) and data representativeness.
+
+Everything else performs sufficiently well.
